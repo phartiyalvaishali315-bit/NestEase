@@ -1,8 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.parsers import MultiPartParser, FormParser
-from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from .models import Property, PropertyMedia
 from .serializers import PropertySerializer
 from .filters import PropertyFilter
@@ -12,8 +11,8 @@ import math
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
-    dphi = math.radians(lat2 - lat1)
-    dlambda = math.radians(lon2 - lon1)
+    dphi       = math.radians(lat2 - lat1)
+    dlambda    = math.radians(lon2 - lon1)
     a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dlambda/2)**2
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
 
@@ -27,11 +26,11 @@ class PropertyListView(APIView):
             availability='available'
         ).order_by('-created_at')
 
-        f = PropertyFilter(request.query_params, queryset=qs)
+        f  = PropertyFilter(request.query_params, queryset=qs)
         qs = f.qs
 
-        lat = request.query_params.get('lat')
-        lng = request.query_params.get('lng')
+        lat    = request.query_params.get('lat')
+        lng    = request.query_params.get('lng')
         radius = float(request.query_params.get('radius', 10))
 
         if lat and lng:
@@ -47,19 +46,19 @@ class PropertyListView(APIView):
             except Exception:
                 pass
 
-        serializer = PropertySerializer(qs, many=True, context={'request': request})
-        return Response(serializer.data)
+        return Response(PropertySerializer(qs, many=True, context={'request': request}).data)
 
 
 class PropertyCreateView(APIView):
     permission_classes = [IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser]
+    parser_classes     = [MultiPartParser, FormParser, JSONParser]
 
     def post(self, request):
         if request.user.role != 'owner':
             return Response({'error': 'Only owners can list properties'}, status=403)
         if not request.user.is_kyc_verified:
             return Response({'error': 'Complete KYC first'}, status=403)
+
         serializer = PropertySerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save(owner=request.user)
@@ -116,12 +115,13 @@ class PropertyAdminReviewView(APIView):
         if request.user.role != 'admin':
             return Response({'error': 'Forbidden'}, status=403)
         try:
-            p = Property.objects.get(id=pk)
+            p      = Property.objects.get(id=pk)
             action = request.data.get('action')
             if action == 'approve':
                 p.admin_status = 'approved'
             elif action == 'reject':
                 p.admin_status = 'rejected'
+                p.rejection_reason = request.data.get('reason', '')
             p.save()
             return Response(PropertySerializer(p, context={'request': request}).data)
         except Property.DoesNotExist:
@@ -130,14 +130,20 @@ class PropertyAdminReviewView(APIView):
 
 class MediaUploadView(APIView):
     permission_classes = [IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser]
+    parser_classes     = [MultiPartParser, FormParser]
 
     def post(self, request, pk):
         try:
             p = Property.objects.get(id=pk, owner=request.user)
         except Property.DoesNotExist:
             return Response({'error': 'Not found'}, status=404)
+
         files = request.FILES.getlist('images')
         for f in files:
-            PropertyMedia.objects.create(property=p, image=f)
+            PropertyMedia.objects.create(
+                property=p,
+                file=f,
+                media_type='image',
+                media_category='interior'
+            )
         return Response({'message': f'{len(files)} images uploaded'})

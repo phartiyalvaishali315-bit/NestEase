@@ -16,20 +16,23 @@ class GetOrCreateChatRoom(APIView):
 
         room, _ = ChatRoom.objects.get_or_create(
             application=app,
-            defaults={'owner': app.property.owner, 'tenant': app.tenant}
+            defaults={
+                'owner':  app.property.owner,
+                'tenant': app.tenant
+            }
         )
 
         messages = Message.objects.filter(room=room).order_by('sent_at')
         messages_data = [{
-            'id': str(m.id),
-            'sender': str(m.sender.id),
-            'text': m.text,
-            'is_read': m.is_read,
+            'id':         str(m.id),
+            'sender':     str(m.sender.id),
+            'text':       m.text,
+            'is_read':    m.is_read,
             'created_at': m.sent_at.isoformat(),
         } for m in messages]
 
         return Response({
-            'id': str(room.id),
+            'id':       str(room.id),
             'messages': messages_data,
         })
 
@@ -49,9 +52,9 @@ class SendMessageView(APIView):
             text=request.data.get('text', '')
         )
         return Response({
-            'id': str(msg.id),
-            'sender': str(msg.sender.id),
-            'text': msg.text,
+            'id':         str(msg.id),
+            'sender':     str(msg.sender.id),
+            'text':       msg.text,
             'created_at': msg.sent_at.isoformat(),
         })
 

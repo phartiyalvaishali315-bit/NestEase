@@ -27,6 +27,7 @@ import ListingQueue      from './pages/admin/ListingQueue';
 import EscrowPanel       from './pages/admin/EscrowPanel';
 import UserManagement    from './pages/admin/UserManagement';
 import DisputePanel      from './pages/admin/DisputePanel';
+import WriteReview from './pages/tenant/WriteReview';
 
 function ProtectedRoute({ children, role }) {
   const { user, loading } = useAuth();
@@ -60,6 +61,7 @@ function AppRoutes() {
       <Route path="/owner/applications"   element={<ProtectedRoute role="owner"><OwnerApplications /></ProtectedRoute>} />
       <Route path="/owner/bookings"       element={<ProtectedRoute role="owner"><OwnerBookings /></ProtectedRoute>} />
       <Route path="/owner/chat"           element={<ProtectedRoute role="owner"><OwnerChat /></ProtectedRoute>} />
+      <Route path="/owner/chat/:appId"    element={<ProtectedRoute role="owner"><OwnerChat /></ProtectedRoute>} />
 
       {/* Tenant */}
       <Route path="/tenant/dashboard"    element={<ProtectedRoute role="tenant"><TenantDashboard /></ProtectedRoute>} />
@@ -68,8 +70,9 @@ function AppRoutes() {
       <Route path="/tenant/applications" element={<ProtectedRoute role="tenant"><MyApplications /></ProtectedRoute>} />
       <Route path="/tenant/bookings"     element={<ProtectedRoute role="tenant"><TenantBookings /></ProtectedRoute>} />
       <Route path="/tenant/chat"         element={<ProtectedRoute role="tenant"><TenantChat /></ProtectedRoute>} />
+      <Route path="/tenant/chat/:appId"  element={<ProtectedRoute role="tenant"><TenantChat /></ProtectedRoute>} />
       <Route path="/tenant/pay/:id"      element={<ProtectedRoute role="tenant"><PayAdvance /></ProtectedRoute>} />
-
+      <Route path="/tenant/review/:bookingId" element={<ProtectedRoute role="tenant"><WriteReview /></ProtectedRoute>} />
       {/* Admin */}
       <Route path="/admin/dashboard" element={<ProtectedRoute role="admin"><AdminDashboard /></ProtectedRoute>} />
       <Route path="/admin/kyc"       element={<ProtectedRoute role="admin"><KYCQueue /></ProtectedRoute>} />

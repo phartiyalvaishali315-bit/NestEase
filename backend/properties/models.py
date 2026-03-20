@@ -1,5 +1,6 @@
 from django.db import models
 from accounts.models import User
+from cloudinary_storage.storage import MediaCloudinaryStorage
 import uuid
 
 class Property(models.Model):
@@ -43,14 +44,17 @@ class PropertyMedia(models.Model):
     CATS  = [('room','Room'), ('kitchen','Kitchen'),
              ('bathroom','Bathroom'), ('outside','Outside'), ('other','Other')]
 
-    id            = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    property      = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='media')
-    media_type    = models.CharField(max_length=10, choices=TYPES)
-    media_category= models.CharField(max_length=30, choices=CATS)
-    file          = models.FileField(upload_to='properties/')
-    is_flagged    = models.BooleanField(default=False)
-    sort_order    = models.IntegerField(default=0)
-    created_at    = models.DateTimeField(auto_now_add=True)
+    id             = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    property       = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='media')
+    media_type     = models.CharField(max_length=10, choices=TYPES, default='photo')
+    media_category = models.CharField(max_length=30, choices=CATS, default='room')
+    file           = models.FileField(
+                        upload_to='properties/',
+                        storage=MediaCloudinaryStorage()
+                     )
+    is_flagged     = models.BooleanField(default=False)
+    sort_order     = models.IntegerField(default=0)
+    created_at     = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.property.title} - {self.media_category}"

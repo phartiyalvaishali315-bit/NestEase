@@ -6,12 +6,12 @@ class PropertyMediaSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
 
     class Meta:
-        model = PropertyMedia
-        fields = ['id', 'image_url', 'is_primary']
+        model  = PropertyMedia
+        fields = ['id', 'image_url']
 
     def get_image_url(self, obj):
-        if obj.image:
-            return obj.image.url
+        if obj.file:
+            return obj.file.url
         return None
 
 

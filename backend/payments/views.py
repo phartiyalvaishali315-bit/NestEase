@@ -5,67 +5,72 @@ from .models import Payment
 from .serializers import PaymentSerializer
 from .escrow import EscrowService
 from bookings.models import Booking
-from accounts.permissions import IsOwner, IsAdmin
+
 
 class InitiatePaymentView(APIView):
-    permission_classes = [IsOwner]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         booking_id = request.data.get('booking_id')
         try:
-            booking = Booking.objects.get(
-                id=booking_id, owner=request.user
-            )
+            booking = Booking.objects.get(id=booking_id, tenant=request.user)
         except Booking.DoesNotExist:
             return Response({'error': 'Booking not found'}, status=404)
-        payment = EscrowService.initiate(booking)
-        return Response(PaymentSerializer(payment).data, status=201)
+
+        payment = EscrowService.initiate(booking, request.user)
+        return Response(PaymentSerializer(payment).data)
+
 
 class PayView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
         try:
-            payment = Payment.objects.get(
-                id=pk,
-                payer=request.user,
-                escrow_status='pending_payment'
-            )
+            payment = Payment.objects.get(id=pk, payer=request.user)
         except Payment.DoesNotExist:
             return Response({'error': 'Payment not found'}, status=404)
+
         payment = EscrowService.pay(payment)
-        return Response({
-            'message': 'Payment successful! Funds held in escrow.',
-            'data': PaymentSerializer(payment).data
-        })
+        return Response(PaymentSerializer(payment).data)
+
 
 class ReleasePaymentView(APIView):
-    permission_classes = [IsAdmin]
+    permission_classes = [IsAuthenticated]
 
-    def post(self, request, pk):
+    def patch(self, request, pk):
+        if request.user.role != 'admin':
+            return Response({'error': 'Forbidden'}, status=403)
         try:
-            payment = Payment.objects.get(id=pk, escrow_status='held')
+            payment = Payment.objects.get(id=pk)
         except Payment.DoesNotExist:
-            return Response({'error': 'Payment not found'}, status=404)
+            return Response({'error': 'Not found'}, status=404)
+
         action = request.data.get('action')
         if action == 'release':
-            EscrowService.release(payment, request.user)
-            return Response({'message': 'Payment released to owner!'})
+            payment = EscrowService.release(payment)
         elif action == 'refund':
-            EscrowService.refund(payment, request.user)
-            return Response({'message': 'Payment refunded to tenant!'})
-        return Response({'error': 'Invalid action'}, status=400)
+            payment = EscrowService.refund(payment)
+
+        return Response(PaymentSerializer(payment).data)
+
 
 class MyPaymentsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        payments = Payment.objects.filter(payer=request.user)
+        payments = Payment.objects.filter(
+            payer=request.user
+        ).order_by('-created_at')
         return Response(PaymentSerializer(payments, many=True).data)
 
+
 class EscrowOverviewView(APIView):
-    permission_classes = [IsAdmin]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        payments = Payment.objects.filter(escrow_status='held')
+        if request.user.role != 'admin':
+            return Response({'error': 'Forbidden'}, status=403)
+        payments = Payment.objects.filter(
+            escrow_status='held'
+        ).order_by('-created_at')
         return Response(PaymentSerializer(payments, many=True).data)

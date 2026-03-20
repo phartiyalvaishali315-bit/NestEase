@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User, OTPToken
-from .serializers import UserSerializer, RegisterSerializer
+from .serializers import UserSerializer
 from .utils import generate_otp, verify_otp
 
 
@@ -13,13 +13,11 @@ class SendOTPView(APIView):
     def post(self, request):
         mobile  = request.data.get('mobile')
         purpose = request.data.get('purpose', 'login')
-        role    = request.data.get('role', 'tenant')
 
         if not mobile:
-            return Response({'error': 'Mobile number required'}, status=400)
-
+            return Response({'error': 'Mobile required'}, status=400)
         if len(str(mobile)) != 10:
-            return Response({'error': 'Invalid mobile number'}, status=400)
+            return Response({'error': 'Invalid mobile'}, status=400)
 
         generate_otp(mobile, purpose)
         return Response({'message': f'OTP sent to {mobile}'})
@@ -52,10 +50,10 @@ class VerifyOTPView(APIView):
         refresh = RefreshToken.for_user(user)
 
         return Response({
-            'access':       str(refresh.access_token),
-            'refresh':      str(refresh),
-            'user':         UserSerializer(user).data,
-            'is_new_user':  created,
+            'access':      str(refresh.access_token),
+            'refresh':     str(refresh),
+            'user':        UserSerializer(user).data,
+            'is_new_user': created,
         })
 
 
@@ -63,11 +61,12 @@ class ProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        serializer = UserSerializer(request.user)
-        return Response(serializer.data)
+        return Response(UserSerializer(request.user).data)
 
     def patch(self, request):
-        serializer = UserSerializer(request.user, data=request.data, partial=True)
+        serializer = UserSerializer(
+            request.user, data=request.data, partial=True
+        )
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -81,5 +80,4 @@ class UserListView(APIView):
         if request.user.role != 'admin':
             return Response({'error': 'Forbidden'}, status=403)
         users = User.objects.all().order_by('-date_joined')
-        serializer = UserSerializer(users, many=True)
-        return Response(serializer.data)
+        return Response(UserSerializer(users, many=True).data)

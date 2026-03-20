@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { createProperty, uploadMedia } from '../../api/properties';
 
 export default function AddProperty() {
-  const navigate      = useNavigate();
-  const [step, setStep]       = useState(1);
+  const navigate          = useNavigate();
+  const [step, setStep]   = useState(1);
   const [loading, setLoading] = useState(false);
   const [photos, setPhotos]   = useState([]);
   const [form, setForm]       = useState({
@@ -19,18 +19,26 @@ export default function AddProperty() {
   const update = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
   const handleSubmit = async () => {
+    if (!form.title || !form.monthly_rent || !form.city) {
+      alert('Please fill Title, Rent and City!');
+      return;
+    }
     setLoading(true);
     try {
-      const res = await createProperty(form);
+      const formData = new FormData();
+      Object.entries(form).forEach(([key, val]) => {
+        formData.append(key, val);
+      });
+      const res = await createProperty(formData);
       if (photos.length > 0) {
-        const formData = new FormData();
-        photos.forEach(f => formData.append('images', f));
-        await uploadMedia(res.data.id, formData);
+        const mediaData = new FormData();
+        photos.forEach(f => mediaData.append('images', f));
+        await uploadMedia(res.data.id, mediaData);
       }
       alert('✅ Property submitted for admin approval!');
       navigate('/owner/properties');
-    } catch {
-      alert('Failed to submit. Check all fields.');
+    } catch (e) {
+      alert(e.response?.data?.error || 'Failed to submit. Check all fields.');
     }
     setLoading(false);
   };
@@ -72,15 +80,20 @@ export default function AddProperty() {
               className="w-full border rounded-xl p-3 outline-none focus:border-blue-500" />
             <textarea placeholder="Description *" value={form.description}
               onChange={e => update('description', e.target.value)}
-              rows={3} className="w-full border rounded-xl p-3 outline-none focus:border-blue-500" />
+              rows={3} className="w-full border rounded-xl p-3 outline-none focus:border-blue-500 resize-none" />
             <input placeholder="Monthly Rent (₹) *" type="number" value={form.monthly_rent}
               onChange={e => update('monthly_rent', e.target.value)}
               className="w-full border rounded-xl p-3 outline-none focus:border-blue-500" />
             <input placeholder="Security Deposit (₹)" type="number" value={form.security_deposit}
               onChange={e => update('security_deposit', e.target.value)}
               className="w-full border rounded-xl p-3 outline-none focus:border-blue-500" />
-            <button onClick={() => setStep(2)}
-              className="w-full bg-blue-900 text-white font-bold py-3 rounded-xl">Next →</button>
+            <button onClick={() => {
+              if (!form.title || !form.monthly_rent) {
+                alert('Title aur Rent zaruri hai!');
+                return;
+              }
+              setStep(2);
+            }} className="w-full bg-blue-900 text-white font-bold py-3 rounded-xl">Next →</button>
           </div>
         )}
 
@@ -89,7 +102,7 @@ export default function AddProperty() {
           <div className="space-y-4">
             <textarea placeholder="Full Address *" value={form.address}
               onChange={e => update('address', e.target.value)}
-              rows={2} className="w-full border rounded-xl p-3 outline-none focus:border-blue-500" />
+              rows={2} className="w-full border rounded-xl p-3 outline-none focus:border-blue-500 resize-none" />
             <div className="grid grid-cols-2 gap-3">
               <input placeholder="City *" value={form.city}
                 onChange={e => update('city', e.target.value)}
@@ -101,23 +114,27 @@ export default function AddProperty() {
             <input placeholder="Pincode *" value={form.pincode}
               onChange={e => update('pincode', e.target.value)}
               className="w-full border rounded-xl p-3 outline-none focus:border-blue-500" />
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
-              <p className="text-blue-700 text-sm font-bold mb-2">📍 Map Coordinates</p>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <p className="text-blue-700 text-sm font-bold mb-1">📍 Map Coordinates</p>
               <p className="text-blue-500 text-xs mb-3">Google Maps pe property dhundo → right click → coordinates copy karo</p>
               <div className="grid grid-cols-2 gap-3">
-                <input placeholder="Latitude (19.0760)" value={form.latitude}
+                <input placeholder="Latitude (29.3444)" value={form.latitude}
                   onChange={e => update('latitude', e.target.value)}
                   className="border rounded-xl p-3 outline-none text-sm focus:border-blue-500" />
-                <input placeholder="Longitude (72.8777)" value={form.longitude}
+                <input placeholder="Longitude (79.5630)" value={form.longitude}
                   onChange={e => update('longitude', e.target.value)}
                   className="border rounded-xl p-3 outline-none text-sm focus:border-blue-500" />
               </div>
             </div>
+
             <div className="flex gap-3">
               <button onClick={() => setStep(1)}
                 className="flex-1 border-2 border-blue-900 text-blue-900 font-bold py-3 rounded-xl">← Back</button>
-              <button onClick={() => setStep(3)}
-                className="flex-1 bg-blue-900 text-white font-bold py-3 rounded-xl">Next →</button>
+              <button onClick={() => {
+                if (!form.city) { alert('City zaruri hai!'); return; }
+                setStep(3);
+              }} className="flex-1 bg-blue-900 text-white font-bold py-3 rounded-xl">Next →</button>
             </div>
           </div>
         )}
@@ -127,15 +144,17 @@ export default function AddProperty() {
           <div className="space-y-4">
             <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 space-y-4">
               {[
-                { label: '🍳 Has Kitchen', key: 'has_kitchen' },
-                { label: '👩 Women Only', key: 'is_women_only' },
-                { label: '🐾 Pet Friendly', key: 'is_pet_friendly' },
+                { label: '🍳 Has Kitchen',   key: 'has_kitchen' },
+                { label: '👩 Women Only',    key: 'is_women_only' },
+                { label: '🐾 Pet Friendly',  key: 'is_pet_friendly' },
               ].map(({ label, key }) => (
                 <label key={key} className="flex items-center justify-between cursor-pointer">
                   <span className="font-bold text-gray-700">{label}</span>
-                  <div className={`w-12 h-6 rounded-full transition ${form[key] ? 'bg-blue-900' : 'bg-gray-300'} relative`}
-                    onClick={() => update(key, !form[key])}>
-                    <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all ${form[key] ? 'left-6' : 'left-0.5'}`} />
+                  <div
+                    className={`w-12 h-6 rounded-full transition-all ${form[key] ? 'bg-blue-900' : 'bg-gray-300'} relative cursor-pointer`}
+                    onClick={() => update(key, !form[key])}
+                  >
+                    <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all shadow ${form[key] ? 'left-6' : 'left-0.5'}`} />
                   </div>
                 </label>
               ))}
@@ -170,7 +189,7 @@ export default function AddProperty() {
           <div className="space-y-4">
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
               <p className="text-blue-700 font-bold text-sm">📸 Add Photos</p>
-              <p className="text-blue-500 text-xs mt-1">Upload clear photos to attract more tenants</p>
+              <p className="text-blue-500 text-xs mt-1">Upload clear photos — tenants prefer properties with photos!</p>
             </div>
 
             <label className="w-full border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition">
@@ -178,16 +197,22 @@ export default function AddProperty() {
                 onChange={e => setPhotos(Array.from(e.target.files))} />
               <span className="text-4xl mb-3">📤</span>
               <p className="font-bold text-gray-600">Tap to upload photos</p>
-              <p className="text-gray-400 text-sm mt-1">Multiple photos allowed</p>
+              <p className="text-gray-400 text-sm mt-1">JPG, PNG — Multiple allowed</p>
             </label>
 
             {photos.length > 0 && (
               <div>
                 <p className="text-green-600 font-bold text-sm mb-2">✅ {photos.length} photo(s) selected</p>
-                <div className="flex gap-2 overflow-x-auto">
+                <div className="flex gap-2 overflow-x-auto pb-1">
                   {photos.map((f, i) => (
-                    <img key={i} src={URL.createObjectURL(f)} alt=""
-                      className="w-24 h-24 object-cover rounded-xl flex-shrink-0 border-2 border-green-400" />
+                    <div key={i} className="relative flex-shrink-0">
+                      <img src={URL.createObjectURL(f)} alt=""
+                        className="w-24 h-24 object-cover rounded-xl border-2 border-green-400" />
+                      <button
+                        onClick={() => setPhotos(photos.filter((_, idx) => idx !== i))}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center"
+                      >✕</button>
+                    </div>
                   ))}
                 </div>
               </div>

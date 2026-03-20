@@ -1,21 +1,34 @@
 from rest_framework import serializers
 from .models import Application
 
+
 class ApplicationSerializer(serializers.ModelSerializer):
-    tenant_name     = serializers.CharField(source='tenant.full_name', read_only=True)
-    tenant_mobile   = serializers.CharField(source='tenant.mobile', read_only=True)
-    property_title  = serializers.CharField(source='property.title', read_only=True)
-    property_city   = serializers.CharField(source='property.city', read_only=True)
+    tenant_name      = serializers.SerializerMethodField()
+    tenant_mobile    = serializers.SerializerMethodField()
+    property_title   = serializers.SerializerMethodField()
+    property_city    = serializers.SerializerMethodField()
+    rejection_reason = serializers.SerializerMethodField()
 
     class Meta:
         model  = Application
         fields = [
-            'id', 'property', 'property_title', 'property_city',
-            'tenant', 'tenant_name', 'tenant_mobile',
-            'message', 'move_in_date', 'status',
-            'rejection_reason', 'reviewed_at', 'created_at'
+            'id', 'property', 'tenant', 'tenant_name', 'tenant_mobile',
+            'property_title', 'property_city', 'message',
+            'move_in_date', 'status', 'rejection_reason', 'applied_at',
         ]
-        read_only_fields = [
-            'id', 'tenant', 'status',
-            'rejection_reason', 'reviewed_at', 'created_at'
-        ]
+        read_only_fields = ['status', 'applied_at']
+
+    def get_tenant_name(self, obj):
+        return obj.tenant.full_name or obj.tenant.mobile
+
+    def get_tenant_mobile(self, obj):
+        return obj.tenant.mobile
+
+    def get_property_title(self, obj):
+        return obj.property.title
+
+    def get_property_city(self, obj):
+        return obj.property.city
+
+    def get_rejection_reason(self, obj):
+        return getattr(obj, 'rejection_reason', '')

@@ -25,10 +25,17 @@ export default function OTPVerify() {
         { access: res.data.access, refresh: res.data.refresh },
         res.data.user
       );
+
+      const userRole = res.data.user.role;
+
       if (res.data.is_new_user) {
         navigate('/auth/register');
+      } else if (userRole === 'admin') {
+        navigate('/admin/dashboard');
+      } else if (userRole === 'owner') {
+        navigate('/owner/dashboard');
       } else {
-        navigate(role === 'owner' ? '/owner/dashboard' : '/tenant/dashboard');
+        navigate('/tenant/dashboard');
       }
     } catch {
       setError('Invalid OTP. Try again.');

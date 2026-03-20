@@ -1,16 +1,18 @@
 from rest_framework import serializers
 from .models import Review
 
+
 class ReviewSerializer(serializers.ModelSerializer):
-    reviewer_name  = serializers.CharField(source='reviewer.full_name', read_only=True)
-    property_title = serializers.CharField(source='property.title', read_only=True)
+    reviewer_name = serializers.SerializerMethodField()
 
     class Meta:
         model  = Review
         fields = [
             'id', 'booking', 'reviewer', 'reviewer_name',
-            'property', 'property_title', 'rating',
-            'cleanliness', 'owner_behaviour', 'value_for_money',
-            'comment', 'is_visible', 'created_at'
+            'property', 'rating', 'cleanliness',
+            'owner_behaviour', 'value_for_money',
+            'comment', 'created_at',
         ]
-        read_only_fields = ['id', 'reviewer', 'created_at']
+
+    def get_reviewer_name(self, obj):
+        return obj.reviewer.full_name or obj.reviewer.mobile

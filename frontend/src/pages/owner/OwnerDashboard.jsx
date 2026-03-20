@@ -1,9 +1,36 @@
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import api from '../../api/axios';
 
 export default function OwnerDashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [stats, setStats] = useState({
+    properties: 0, bookings: 0, applications: 0, earnings: 0
+  });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const [propsRes, appsRes, bookingsRes] = await Promise.all([
+          api.get('/api/properties/mine/'),
+          api.get('/api/applications/received/'),
+          api.get('/api/bookings/'),
+        ]);
+        const totalEarnings = bookingsRes.data
+          .filter(b => b.status === 'confirmed' || b.status === 'completed')
+          .reduce((sum, b) => sum + parseFloat(b.monthly_rent || 0), 0);
+        setStats({
+          properties:   propsRes.data.length,
+          applications: appsRes.data.length,
+          bookings:     bookingsRes.data.length,
+          earnings:     totalEarnings,
+        });
+      } catch { }
+    };
+    fetchStats();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -67,13 +94,13 @@ export default function OwnerDashboard() {
           </div>
         </div>
 
-        {/* Stats */}
+        {/* Stats — Real Data */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           {[
-            { label: 'Properties', value: '0', icon: '🏠', color: 'from-blue-500 to-blue-600' },
-            { label: 'Bookings', value: '0', icon: '📅', color: 'from-green-500 to-green-600' },
-            { label: 'Applications', value: '0', icon: '📋', color: 'from-orange-400 to-orange-500' },
-            { label: 'Earnings', value: '₹0', icon: '💰', color: 'from-purple-500 to-purple-600' },
+            { label: 'Properties',   value: stats.properties,   icon: '🏠', color: 'from-blue-500 to-blue-600' },
+            { label: 'Bookings',     value: stats.bookings,     icon: '📅', color: 'from-green-500 to-green-600' },
+            { label: 'Applications', value: stats.applications, icon: '📋', color: 'from-orange-400 to-orange-500' },
+            { label: 'Earnings',     value: `₹${stats.earnings}`, icon: '💰', color: 'from-purple-500 to-purple-600' },
           ].map((s, i) => (
             <div key={i} className={`bg-gradient-to-br ${s.color} rounded-xl p-4 text-white shadow-md`}>
               <span className="text-2xl">{s.icon}</span>
@@ -87,11 +114,11 @@ export default function OwnerDashboard() {
         <h3 className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-3">Quick Actions</h3>
         <div className="space-y-3">
           {[
-            { icon: '➕', title: 'Add New Property', sub: 'List a Room, PG or Hostel', path: '/owner/properties/add', bg: 'bg-gradient-to-r from-blue-900 to-blue-700', text: 'text-white' },
-            { icon: '🏡', title: 'My Properties', sub: 'View and manage your listings', path: '/owner/properties', bg: 'bg-white border border-gray-200', text: 'text-blue-900' },
-            { icon: '📋', title: 'Tenant Applications', sub: 'Review and approve applications', path: '/owner/applications', bg: 'bg-white border border-gray-200', text: 'text-blue-900' },
-            { icon: '📅', title: 'Bookings', sub: 'View confirmed bookings', path: '/owner/bookings', bg: 'bg-white border border-gray-200', text: 'text-blue-900' },
-            { icon: '💬', title: 'Messages', sub: 'Chat with tenants', path: '/owner/chat', bg: 'bg-white border border-gray-200', text: 'text-blue-900' },
+            { icon: '➕', title: 'Add New Property',     sub: 'List a Room, PG or Hostel',        path: '/owner/properties/add', bg: 'bg-gradient-to-r from-blue-900 to-blue-700', text: 'text-white' },
+            { icon: '🏡', title: 'My Properties',        sub: 'View and manage your listings',     path: '/owner/properties',     bg: 'bg-white border border-gray-200', text: 'text-blue-900' },
+            { icon: '📋', title: 'Tenant Applications',  sub: 'Review and approve applications',   path: '/owner/applications',   bg: 'bg-white border border-gray-200', text: 'text-blue-900' },
+            { icon: '📅', title: 'Bookings',             sub: 'View confirmed bookings',           path: '/owner/bookings',       bg: 'bg-white border border-gray-200', text: 'text-blue-900' },
+            { icon: '💬', title: 'Messages',             sub: 'Chat with tenants',                 path: '/owner/chat',           bg: 'bg-white border border-gray-200', text: 'text-blue-900' },
           ].map((item, i) => (
             <button
               key={i}

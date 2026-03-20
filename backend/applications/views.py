@@ -1,68 +1,115 @@
-from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.utils import timezone
 from .models import Application
 from .serializers import ApplicationSerializer
-from accounts.permissions import IsOwner, IsTenant
+from bookings.models import Booking
+import random
+import string
 
-class ApplyView(generics.CreateAPIView):
-    serializer_class   = ApplicationSerializer
-    permission_classes = [IsTenant]
 
-    def perform_create(self, serializer):
-        serializer.save(tenant=self.request.user)
+def generate_booking_ref():
+    digits = ''.join(random.choices(string.digits, k=8))
+    return f'NE{digits}'
 
-class MyApplicationsView(generics.ListAPIView):
-    serializer_class   = ApplicationSerializer
-    permission_classes = [IsTenant]
 
-    def get_queryset(self):
-        return Application.objects.filter(tenant=self.request.user)
+class ApplyView(APIView):
+    permission_classes = [IsAuthenticated]
 
-class ReceivedApplicationsView(generics.ListAPIView):
-    serializer_class   = ApplicationSerializer
-    permission_classes = [IsOwner]
+    def post(self, request):
+        if request.user.role != 'tenant':
+            return Response({'error': 'Only tenants can apply'}, status=403)
+        if not request.user.is_kyc_verified:
+            return Response({'error': 'Complete KYC first'}, status=403)
 
-    def get_queryset(self):
-        return Application.objects.filter(
-            property__owner=self.request.user
+        property_id  = request.data.get('property')
+        move_in_date = request.data.get('move_in_date')
+        message      = request.data.get('message', '')
+
+        from properties.models import Property
+        try:
+            prop = Property.objects.get(id=property_id)
+        except Property.DoesNotExist:
+            return Response({'error': 'Property not found'}, status=404)
+
+        if Application.objects.filter(property=prop, tenant=request.user).exists():
+            return Response({'error': 'Already applied for this property'}, status=400)
+
+        app = Application.objects.create(
+            property=prop,
+            tenant=request.user,
+            move_in_date=move_in_date,
+            message=message,
         )
+        return Response(ApplicationSerializer(app).data, status=201)
+
+
+class MyApplicationsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        apps = Application.objects.filter(
+            tenant=request.user
+        ).order_by('-applied_at')
+        return Response(ApplicationSerializer(apps, many=True).data)
+
+
+class ReceivedApplicationsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        apps = Application.objects.filter(
+            property__owner=request.user
+        ).order_by('-applied_at')
+        return Response(ApplicationSerializer(apps, many=True).data)
+
 
 class ReviewApplicationView(APIView):
-    permission_classes = [IsOwner]
+    permission_classes = [IsAuthenticated]
 
     def patch(self, request, pk):
         try:
-            app = Application.objects.get(
-                id=pk, property__owner=request.user
-            )
+            app = Application.objects.get(id=pk, property__owner=request.user)
         except Application.DoesNotExist:
             return Response({'error': 'Not found'}, status=404)
 
         action = request.data.get('action')
+        reason = request.data.get('reason', '')
+
         if action == 'approve':
-            app.status      = 'approved'
-            app.reviewed_at = timezone.now()
+            app.status = 'approved'
             app.save()
-            return Response({'message': 'Application approved!'})
+
+            if not Booking.objects.filter(application=app).exists():
+                advance = float(app.property.monthly_rent) * 0.5
+                Booking.objects.create(
+                    application=app,
+                    property=app.property,
+                    owner=app.property.owner,
+                    tenant=app.tenant,
+                    start_date=app.move_in_date,
+                    monthly_rent=app.property.monthly_rent,
+                    advance_amount=advance,
+                    booking_ref=generate_booking_ref(),
+                    status='confirmed',
+                )
+
         elif action == 'reject':
-            app.status           = 'rejected'
-            app.rejection_reason = request.data.get('reason', '')
-            app.reviewed_at      = timezone.now()
+            app.status = 'rejected'
+            app.rejection_reason = reason
             app.save()
-            return Response({'message': 'Application rejected!'})
-        return Response({'error': 'Invalid action'}, status=400)
+
+        return Response(ApplicationSerializer(app).data)
+
 
 class WithdrawApplicationView(APIView):
-    permission_classes = [IsTenant]
+    permission_classes = [IsAuthenticated]
 
-    def delete(self, request, pk):
+    def patch(self, request, pk):
         try:
             app = Application.objects.get(id=pk, tenant=request.user)
             app.status = 'withdrawn'
             app.save()
-            return Response({'message': 'Application withdrawn!'})
+            return Response({'message': 'Withdrawn'})
         except Application.DoesNotExist:
             return Response({'error': 'Not found'}, status=404)

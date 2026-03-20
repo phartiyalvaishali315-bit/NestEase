@@ -7,16 +7,23 @@ export default function ListingQueue() {
   const [loading, setLoading] = useState(true);
   const navigate              = useNavigate();
 
-  useEffect(() => {
-    api.get('/api/properties/admin/pending/')
-      .then(res => setProps(res.data))
-      .finally(() => setLoading(false));
-  }, []);
+  const fetchProps = async () => {
+    try {
+      const res = await api.get('/api/properties/admin/pending/');
+      setProps(res.data);
+    } catch { }
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchProps(); }, []);
 
   const handle = async (id, action, reason = '') => {
-    await api.patch(`/api/properties/admin/${id}/review/`, { action, reason });
-    const res = await api.get('/api/properties/admin/pending/');
-    setProps(res.data);
+    try {
+      await api.patch(`/api/properties/admin/${id}/review/`, { action, reason });
+      await fetchProps();
+    } catch (e) {
+      alert('Failed: ' + (e.response?.data?.error || 'Unknown error'));
+    }
   };
 
   return (
@@ -45,18 +52,35 @@ export default function ListingQueue() {
                 <h3 className="font-bold text-gray-800 text-lg">{p.title}</h3>
                 <p className="text-gray-500 text-sm">📍 {p.city}, {p.state}</p>
                 <p className="text-gray-500 text-sm">💰 ₹{p.monthly_rent}/mo • {p.property_type}</p>
+                <p className="text-gray-500 text-sm">👤 {p.owner_name}</p>
               </div>
               <span className="bg-orange-100 text-orange-600 text-xs px-2 py-1 rounded-full font-bold">pending</span>
             </div>
-            <p className="text-gray-600 text-sm mb-4 bg-gray-50 p-3 rounded-xl">{p.description}</p>
+
+            {p.description && (
+              <p className="text-gray-600 text-sm mb-4 bg-gray-50 p-3 rounded-xl">{p.description}</p>
+            )}
+
+            {p.media && p.media.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto mb-4">
+                {p.media.map((m, i) => (
+                  <img key={i} src={m.image_url} alt=""
+                    className="w-24 h-24 object-cover rounded-xl flex-shrink-0" />
+                ))}
+              </div>
+            )}
+
             <div className="flex gap-2">
               <button
                 onClick={() => handle(p.id, 'approve')}
-                className="flex-1 bg-gradient-to-r from-green-600 to-green-500 text-white py-2 rounded-xl font-bold text-sm"
+                className="flex-1 bg-gradient-to-r from-green-600 to-green-500 text-white py-3 rounded-xl font-bold"
               >✅ Approve</button>
               <button
-                onClick={() => { const r = prompt('Rejection reason?'); if(r) handle(p.id, 'reject', r); }}
-                className="flex-1 bg-gradient-to-r from-red-500 to-red-400 text-white py-2 rounded-xl font-bold text-sm"
+                onClick={() => {
+                  const r = prompt('Rejection reason?');
+                  if (r) handle(p.id, 'reject', r);
+                }}
+                className="flex-1 bg-gradient-to-r from-red-500 to-red-400 text-white py-3 rounded-xl font-bold"
               >❌ Reject</button>
             </div>
           </div>

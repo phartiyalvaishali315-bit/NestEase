@@ -9,8 +9,8 @@ import { applyProperty } from '../../api/applications';
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-  iconUrl:       'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-  shadowUrl:     'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
 const redIcon = new L.Icon({
@@ -20,21 +20,23 @@ const redIcon = new L.Icon({
 });
 
 export default function PropertyDetail() {
-  const { id }                    = useParams();
-  const navigate                  = useNavigate();
-  const [prop, setProp]           = useState(null);
-  const [loading, setLoading]     = useState(true);
-  const [applying, setApply]      = useState(false);
-  const [showApply, setShowApply] = useState(false);
-  const [activeTab, setActiveTab] = useState('details');
-  const [nearby, setNearby]       = useState([]);
-  const [form, setForm]           = useState({ message: '', move_in_date: '' });
+  const { id }                          = useParams();
+  const navigate                        = useNavigate();
+  const [prop, setProp]                 = useState(null);
+  const [loading, setLoading]           = useState(true);
+  const [applying, setApply]            = useState(false);
+  const [showApply, setShowApply]       = useState(false);
+  const [activeTab, setActiveTab]       = useState('details');
+  const [nearby, setNearby]             = useState([]);
+  const [nearbyLoading, setNearbyLoading] = useState(false);
+  const [form, setForm]                 = useState({ message: '', move_in_date: '' });
 
   useEffect(() => {
     getProperty(id)
       .then(res => {
         setProp(res.data);
-        if (res.data.latitude && res.data.longitude) {
+        if (res.data.latitude && res.data.longitude &&
+            parseFloat(res.data.latitude) !== 0) {
           fetchNearby(res.data.latitude, res.data.longitude);
         }
       })
@@ -42,22 +44,48 @@ export default function PropertyDetail() {
   }, [id]);
 
   const fetchNearby = async (lat, lng) => {
+    setNearbyLoading(true);
     try {
-      const types = ['hospital', 'college', 'supermarket', 'restaurant', 'bus_stop'];
-      const results = [];
-      for (const type of types) {
-        const url = `https://nominatim.openstreetmap.org/search?q=${type}&lat=${lat}&lon=${lng}&format=json&limit=2&bounded=1&viewbox=${lng-0.05},${lat+0.05},${lng+0.05},${lat-0.05}`;
-        const res = await fetch(url);
-        const data = await res.json();
-        data.forEach(d => results.push({
-          name: d.display_name.split(',')[0],
-          type,
-          lat: parseFloat(d.lat),
-          lng: parseFloat(d.lon),
-        }));
-      }
+      const query = `
+        [out:json][timeout:15];
+        (
+          node["amenity"~"hospital|clinic|school|college|university|marketplace|supermarket|bus_station|restaurant|cafe|pharmacy|bank|atm"](around:2000,${lat},${lng});
+          way["amenity"~"hospital|clinic|school|college|university|marketplace|supermarket|bus_station|restaurant|cafe|pharmacy|bank|atm"](around:2000,${lat},${lng});
+        );
+        out body 15;
+      `;
+      const response = await fetch('https://overpass-api.de/api/interpreter', {
+        method: 'POST',
+        body: query,
+      });
+      const data = await response.json();
+      const results = data.elements
+        .filter(el => el.tags?.name)
+        .map(el => ({
+          name: el.tags.name,
+          type: el.tags.amenity || 'place',
+          lat: el.lat || el.center?.lat,
+          lng: el.lon || el.center?.lon,
+        }))
+        .filter(n => n.lat && n.lng)
+        .slice(0, 12);
       setNearby(results);
-    } catch { }
+    } catch {
+      setNearby([]);
+    }
+    setNearbyLoading(false);
+  };
+
+  const nearbyIcon = (type) => {
+    const icons = {
+      hospital: '🏥', clinic: '🏥', doctors: '🏥', pharmacy: '💊',
+      college: '🎓', university: '🎓', school: '🏫',
+      supermarket: '🛒', marketplace: '🛒', shop: '🛒',
+      restaurant: '🍽️', cafe: '☕', fast_food: '🍔',
+      bus_stop: '🚌', bus_station: '🚌',
+      bank: '🏦', atm: '💳',
+    };
+    return icons[type] || '📍';
   };
 
   const handleApply = async () => {
@@ -74,7 +102,7 @@ export default function PropertyDetail() {
   };
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="w-12 h-12 border-4 border-green-600 border-t-transparent rounded-full animate-spin"></div>
     </div>
   );
@@ -88,16 +116,10 @@ export default function PropertyDetail() {
   const hasLocation = prop.latitude && prop.longitude &&
     parseFloat(prop.latitude) !== 0 && parseFloat(prop.longitude) !== 0;
 
-  const nearbyIcons = {
-    hospital:    '🏥',
-    college:     '🎓',
-    supermarket: '🛒',
-    restaurant:  '🍽️',
-    bus_stop:    '🚌',
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
+
+      {/* Navbar */}
       <nav className="bg-gradient-to-r from-green-800 to-green-600 text-white px-6 py-4 shadow-lg">
         <div className="max-w-2xl mx-auto flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="bg-green-700 w-8 h-8 rounded-lg flex items-center justify-center">←</button>
@@ -107,7 +129,7 @@ export default function PropertyDetail() {
 
       <div className="max-w-2xl mx-auto p-4 pb-36">
 
-        {/* Photos */}
+        {/* Photos or placeholder */}
         {prop.media && prop.media.length > 0 ? (
           <div className="flex gap-2 overflow-x-auto mb-4 pb-1">
             {prop.media.map((m, i) => (
@@ -121,11 +143,13 @@ export default function PropertyDetail() {
           </div>
         )}
 
-        {/* Header */}
+        {/* Header Card */}
         <div className="bg-white rounded-2xl shadow-sm p-5 mb-4 border border-gray-100">
           <div className="flex justify-between items-start mb-2">
             <div>
-              <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-full uppercase">{prop.property_type}</span>
+              <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-full uppercase">
+                {prop.property_type}
+              </span>
               <h2 className="text-xl font-bold text-gray-800 mt-2">{prop.title}</h2>
               <p className="text-gray-500 text-sm">📍 {prop.city}, {prop.state}</p>
             </div>
@@ -134,20 +158,26 @@ export default function PropertyDetail() {
               <p className="text-gray-400 text-xs">/month</p>
             </div>
           </div>
-          <p className="text-gray-600 text-sm mt-2">{prop.description}</p>
+          {prop.description && (
+            <p className="text-gray-600 text-sm mt-2">{prop.description}</p>
+          )}
         </div>
 
         {/* Tabs */}
         <div className="flex bg-white rounded-xl shadow-sm mb-4 overflow-hidden border border-gray-100">
-          {['details', 'map', 'nearby'].map(tab => (
-            <button key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-3 text-sm font-bold capitalize transition ${
-                activeTab === tab
+          {[
+            { key: 'details', label: '📋 Details' },
+            { key: 'map',     label: '🗺️ Map' },
+            { key: 'nearby',  label: '📍 Nearby' },
+          ].map(tab => (
+            <button key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`flex-1 py-3 text-sm font-bold transition ${
+                activeTab === tab.key
                   ? 'bg-green-700 text-white'
                   : 'text-gray-500 hover:bg-gray-50'
               }`}
-            >{tab === 'nearby' ? '📍 Nearby' : tab === 'map' ? '🗺️ Map' : '📋 Details'}</button>
+            >{tab.label}</button>
           ))}
         </div>
 
@@ -174,14 +204,20 @@ export default function PropertyDetail() {
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm p-5 mb-4 border border-gray-100">
-              <h3 className="font-bold text-gray-700 mb-3">Amenities</h3>
+              <h3 className="font-bold text-gray-700 mb-3">✨ Amenities</h3>
               <div className="flex flex-wrap gap-2">
                 {prop.is_women_only   && <span className="bg-pink-50 text-pink-600 px-3 py-2 rounded-xl text-sm">👩 Women Only</span>}
                 {prop.is_pet_friendly && <span className="bg-green-50 text-green-600 px-3 py-2 rounded-xl text-sm">🐾 Pet Friendly</span>}
                 {prop.has_kitchen     && <span className="bg-orange-50 text-orange-600 px-3 py-2 rounded-xl text-sm">🍳 Kitchen</span>}
                 <span className="bg-blue-50 text-blue-600 px-3 py-2 rounded-xl text-sm">🚿 {prop.bathroom_type} Bath</span>
-                <span className="bg-purple-50 text-purple-600 px-3 py-2 rounded-xl text-sm">👥 {prop.sharing_type}</span>
+                <span className="bg-purple-50 text-purple-600 px-3 py-2 rounded-xl text-sm">👥 {prop.sharing_type} sharing</span>
               </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm p-5 mb-4 border border-gray-100">
+              <h3 className="font-bold text-gray-700 mb-2">📍 Location</h3>
+              <p className="text-gray-600 text-sm">{prop.address}</p>
+              <p className="text-gray-500 text-sm">{prop.city}, {prop.state} - {prop.pincode}</p>
             </div>
           </>
         )}
@@ -193,11 +229,12 @@ export default function PropertyDetail() {
               <MapContainer
                 center={[parseFloat(prop.latitude), parseFloat(prop.longitude)]}
                 zoom={15}
-                style={{ height: '350px', width: '100%' }}
+                style={{ height: '380px', width: '100%' }}
               >
                 <TileLayer
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   attribution='&copy; OpenStreetMap'
+                  keepBuffer={4}
                 />
                 <Marker position={[parseFloat(prop.latitude), parseFloat(prop.longitude)]}>
                   <Popup>
@@ -213,13 +250,13 @@ export default function PropertyDetail() {
                 />
                 {nearby.map((n, i) => (
                   <Marker key={i} position={[n.lat, n.lng]} icon={redIcon}>
-                    <Popup>{nearbyIcons[n.type]} {n.name}</Popup>
+                    <Popup>{nearbyIcon(n.type)} {n.name}</Popup>
                   </Marker>
                 ))}
               </MapContainer>
             ) : (
               <div className="h-48 flex items-center justify-center">
-                <p className="text-gray-400">📍 Location not available</p>
+                <p className="text-gray-400">📍 Location not added by owner</p>
               </div>
             )}
             <div className="p-4">
@@ -231,17 +268,29 @@ export default function PropertyDetail() {
         {/* Tab: Nearby */}
         {activeTab === 'nearby' && (
           <div className="bg-white rounded-2xl shadow-sm p-5 mb-4 border border-gray-100">
-            <h3 className="font-bold text-gray-700 mb-4">Nearby Places</h3>
-            {nearby.length === 0 ? (
-              <p className="text-gray-400 text-center py-8">Loading nearby places...</p>
+            <h3 className="font-bold text-gray-700 mb-4">📍 Nearby Places</h3>
+            {nearbyLoading ? (
+              <div className="flex flex-col items-center py-10">
+                <div className="w-10 h-10 border-4 border-green-600 border-t-transparent rounded-full animate-spin mb-3"></div>
+                <p className="text-gray-500 text-sm">Finding nearby places...</p>
+                <p className="text-gray-400 text-xs mt-1">This may take a few seconds</p>
+              </div>
+            ) : nearby.length === 0 ? (
+              <div className="text-center py-10">
+                <p className="text-5xl mb-3">🗺️</p>
+                <p className="text-gray-600 font-bold">No places found nearby</p>
+                <p className="text-gray-400 text-xs mt-1">Area may have limited data</p>
+              </div>
             ) : (
               <div className="space-y-3">
                 {nearby.map((n, i) => (
-                  <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                    <span className="text-2xl">{nearbyIcons[n.type]}</span>
-                    <div>
+                  <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition">
+                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-xl shadow-sm flex-shrink-0">
+                      {nearbyIcon(n.type)}
+                    </div>
+                    <div className="flex-1">
                       <p className="font-bold text-gray-800 text-sm">{n.name}</p>
-                      <p className="text-gray-500 text-xs capitalize">{n.type.replace('_', ' ')}</p>
+                      <p className="text-gray-400 text-xs capitalize">{n.type.replace(/_/g, ' ')}</p>
                     </div>
                   </div>
                 ))}
@@ -251,13 +300,13 @@ export default function PropertyDetail() {
         )}
       </div>
 
-      {/* Fixed Bottom */}
+      {/* Fixed Bottom Apply Button */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg p-4">
         <div className="max-w-2xl mx-auto">
           {!showApply ? (
             <button
               onClick={() => setShowApply(true)}
-              className="w-full bg-gradient-to-r from-green-700 to-green-600 text-white font-bold py-4 rounded-xl text-lg"
+              className="w-full bg-gradient-to-r from-green-700 to-green-600 text-white font-bold py-4 rounded-xl text-lg hover:opacity-90 transition"
             >✅ Apply for this Property</button>
           ) : (
             <div className="space-y-2">
@@ -265,21 +314,23 @@ export default function PropertyDetail() {
                 value={form.move_in_date}
                 onChange={e => setForm({ ...form, move_in_date: e.target.value })}
                 min={new Date().toISOString().split('T')[0]}
-                className="w-full border rounded-xl p-3 outline-none text-sm"
+                className="w-full border rounded-xl p-3 outline-none focus:border-green-500 text-sm"
               />
               <textarea
-                placeholder="Introduce yourself..."
+                placeholder="Introduce yourself to the owner..."
                 value={form.message}
                 onChange={e => setForm({ ...form, message: e.target.value })}
                 rows={2}
-                className="w-full border rounded-xl p-3 outline-none text-sm resize-none"
+                className="w-full border rounded-xl p-3 outline-none focus:border-green-500 text-sm resize-none"
               />
               <div className="flex gap-2">
                 <button onClick={() => setShowApply(false)}
-                  className="flex-1 border-2 border-gray-300 text-gray-600 py-3 rounded-xl font-bold text-sm">Cancel</button>
+                  className="flex-1 border-2 border-gray-300 text-gray-600 py-3 rounded-xl font-bold text-sm">
+                  Cancel
+                </button>
                 <button onClick={handleApply} disabled={applying}
-                  className="w-2/3 bg-green-700 text-white py-3 rounded-xl font-bold text-sm disabled:opacity-50">
-                  {applying ? 'Submitting...' : 'Submit'}
+                  className="w-2/3 bg-gradient-to-r from-green-700 to-green-600 text-white py-3 rounded-xl font-bold text-sm disabled:opacity-50">
+                  {applying ? 'Submitting...' : 'Submit Application'}
                 </button>
               </div>
             </div>
