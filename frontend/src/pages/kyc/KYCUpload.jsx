@@ -1,12 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 
 export default function KYCUpload() {
-  const [files, setFiles]     = useState({ aadhaar_front: null, aadhaar_back: null, selfie_with_doc: null });
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState('');
-  const navigate              = useNavigate();
+  const [files, setFiles]       = useState({ aadhaar_front: null, aadhaar_back: null, selfie_with_doc: null });
+  const [loading, setLoading]   = useState(false);
+  const [kycStatus, setKycStatus] = useState(null);
+  const [error, setError]       = useState('');
+  const navigate                = useNavigate();
+
+  useEffect(() => {
+    api.get('/api/kyc/')
+      .then(res => setKycStatus(res.data))
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async () => {
     if (!files.aadhaar_front || !files.aadhaar_back) {
@@ -16,7 +23,7 @@ export default function KYCUpload() {
     setLoading(true);
     const formData = new FormData();
     formData.append('aadhaar_front', files.aadhaar_front);
-    formData.append('aadhaar_back', files.aadhaar_back);
+    formData.append('aadhaar_back',  files.aadhaar_back);
     if (files.selfie_with_doc) formData.append('selfie_with_doc', files.selfie_with_doc);
     try {
       await api.post('/api/kyc/', formData);
@@ -40,7 +47,6 @@ export default function KYCUpload() {
           <>
             <span className="text-3xl mb-2">✅</span>
             <p className="text-green-600 font-bold text-sm">{files[fileKey].name}</p>
-            <p className="text-green-500 text-xs mt-1">Tap to change</p>
           </>
         ) : (
           <>
@@ -64,12 +70,37 @@ export default function KYCUpload() {
 
       <div className="max-w-md mx-auto p-6">
 
-        {/* Info Box */}
+        {/* KYC Status */}
+        {kycStatus && kycStatus.status !== 'not_submitted' && (
+          <div className={`rounded-xl p-4 mb-4 ${
+            kycStatus.status === 'approved' ? 'bg-green-50 border border-green-200' :
+            kycStatus.status === 'rejected' ? 'bg-red-50 border border-red-200' :
+            'bg-orange-50 border border-orange-200'
+          }`}>
+            <p className={`font-bold text-sm ${
+              kycStatus.status === 'approved' ? 'text-green-700' :
+              kycStatus.status === 'rejected' ? 'text-red-700' :
+              'text-orange-700'
+            }`}>
+              {kycStatus.status === 'approved' ? '✅ KYC Verified!' :
+               kycStatus.status === 'rejected' ? '❌ KYC Rejected' :
+               '⏳ KYC Under Review'}
+            </p>
+            {kycStatus.status === 'rejected' && kycStatus.rejection_reason && (
+              <p className="text-red-600 text-sm mt-1">Reason: {kycStatus.rejection_reason}</p>
+            )}
+            {kycStatus.status === 'pending' && (
+              <p className="text-orange-600 text-sm mt-1">Admin is reviewing your documents</p>
+            )}
+          </div>
+        )}
+
+        {/* Info */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 flex gap-3">
           <span className="text-2xl">🛡️</span>
           <div>
             <p className="font-bold text-blue-800 text-sm">Why KYC?</p>
-            <p className="text-blue-600 text-xs mt-1">KYC verification ensures platform safety and builds trust between owners and tenants.</p>
+            <p className="text-blue-600 text-xs mt-1">KYC verification ensures platform safety and builds trust.</p>
           </div>
         </div>
 
@@ -78,7 +109,7 @@ export default function KYCUpload() {
           <p className="text-gray-500 text-sm mb-6">Upload clear photos of your Aadhaar card</p>
 
           <FileUploadBox label="Aadhaar Front" required fileKey="aadhaar_front" emoji="🪪" />
-          <FileUploadBox label="Aadhaar Back" required fileKey="aadhaar_back" emoji="🪪" />
+          <FileUploadBox label="Aadhaar Back"  required fileKey="aadhaar_back"  emoji="🪪" />
           <FileUploadBox label="Selfie with Aadhaar" fileKey="selfie_with_doc" emoji="🤳" />
 
           {error && (
@@ -87,10 +118,10 @@ export default function KYCUpload() {
             </div>
           )}
 
-          <button
-            onClick={handleSubmit} disabled={loading}
-            className="w-full bg-gradient-to-r from-blue-900 to-blue-700 text-white font-bold py-4 rounded-xl hover:opacity-90 transition disabled:opacity-50 text-lg"
-          >{loading ? '⏳ Uploading...' : '🚀 Submit KYC'}</button>
+          <button onClick={handleSubmit} disabled={loading}
+            className="w-full bg-gradient-to-r from-blue-900 to-blue-700 text-white font-bold py-4 rounded-xl hover:opacity-90 transition disabled:opacity-50 text-lg">
+            {loading ? '⏳ Uploading...' : '🚀 Submit KYC'}
+          </button>
         </div>
       </div>
     </div>

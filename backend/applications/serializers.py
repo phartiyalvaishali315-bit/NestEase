@@ -14,9 +14,9 @@ class ApplicationSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'property', 'tenant', 'tenant_name', 'tenant_mobile',
             'property_title', 'property_city', 'message',
-            'move_in_date', 'status', 'rejection_reason', 'applied_at',
+            'move_in_date', 'status', 'rejection_reason', 'created_at',
         ]
-        read_only_fields = ['status', 'applied_at']
+        read_only_fields = ['status', 'created_at']
 
     def get_tenant_name(self, obj):
         return obj.tenant.full_name or obj.tenant.mobile

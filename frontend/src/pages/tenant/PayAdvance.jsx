@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { initiatePayment, payNow } from '../../api/payments';
 import api from '../../api/axios';
 
 export default function PayAdvance() {
@@ -14,19 +13,24 @@ export default function PayAdvance() {
   useEffect(() => {
     api.get(`/api/bookings/${id}/`)
       .then(res => setBooking(res.data))
+      .catch(() => alert('Booking not found!'))
       .finally(() => setLoading(false));
   }, [id]);
 
   const handleInitiate = async () => {
-    const res = await initiatePayment(id);
-    setPayment(res.data);
+    try {
+      const res = await api.post('/api/payments/initiate/', { booking_id: id });
+      setPayment(res.data);
+    } catch (e) {
+      alert(e.response?.data?.error || 'Failed to initiate payment');
+    }
   };
 
   const handlePay = async () => {
     setPaying(true);
     try {
-      await payNow(payment.id);
-      alert('✅ Payment successful! Amount held in escrow.');
+      await api.post(`/api/payments/${payment.id}/pay/`);
+      alert('✅ Payment successful! Amount held in escrow safely.');
       navigate('/tenant/bookings');
     } catch {
       alert('Payment failed. Try again.');
@@ -55,12 +59,13 @@ export default function PayAdvance() {
             <h3 className="font-bold text-gray-800 text-lg mb-4">Booking Summary</h3>
             <div className="space-y-3">
               {[
-                ['Booking Ref', booking.booking_ref],
-                ['Monthly Rent', `₹${booking.monthly_rent}`],
-                ['Advance (50%)', `₹${booking.advance_amount}`],
-                ['Start Date', booking.start_date],
+                ['Booking Ref',    booking.booking_ref],
+                ['Property',       booking.property_title],
+                ['Monthly Rent',   `₹${booking.monthly_rent}`],
+                ['Advance (50%)',  `₹${booking.advance_amount}`],
+                ['Start Date',     booking.start_date],
               ].map(([label, value]) => (
-                <div key={label} className="flex justify-between">
+                <div key={label} className="flex justify-between py-2 border-b border-gray-50">
                   <span className="text-gray-500 text-sm">{label}</span>
                   <span className="font-bold text-gray-800 text-sm">{value}</span>
                 </div>
@@ -69,7 +74,7 @@ export default function PayAdvance() {
 
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mt-4">
               <p className="text-blue-700 text-sm font-bold">🔒 Escrow Protection</p>
-              <p className="text-blue-600 text-xs mt-1">Your payment will be held securely until move-in is confirmed</p>
+              <p className="text-blue-600 text-xs mt-1">Your payment will be held securely until move-in is confirmed by admin</p>
             </div>
           </div>
         )}
@@ -77,14 +82,23 @@ export default function PayAdvance() {
         {!payment ? (
           <button
             onClick={handleInitiate}
-            className="w-full bg-gradient-to-r from-green-700 to-green-600 text-white font-bold py-4 rounded-xl text-lg"
-          >Initiate Payment</button>
+            className="w-full bg-gradient-to-r from-green-700 to-green-600 text-white font-bold py-4 rounded-xl text-lg hover:opacity-90 transition"
+          >💳 Initiate Payment</button>
         ) : (
-          <button
-            onClick={handlePay}
-            disabled={paying}
-            className="w-full bg-gradient-to-r from-purple-700 to-purple-600 text-white font-bold py-4 rounded-xl text-lg disabled:opacity-50"
-          >{paying ? '⏳ Processing...' : `💳 Pay ₹${payment.amount}`}</button>
+          <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+            <div className="text-center mb-4">
+              <p className="text-3xl font-black text-green-700">₹{payment.amount}</p>
+              <p className="text-gray-500 text-sm mt-1">Advance Payment</p>
+            </div>
+            <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-4">
+              <p className="text-green-700 text-sm">Ref: {payment.transaction_ref}</p>
+            </div>
+            <button
+              onClick={handlePay}
+              disabled={paying}
+              className="w-full bg-gradient-to-r from-purple-700 to-purple-600 text-white font-bold py-4 rounded-xl text-lg disabled:opacity-50"
+            >{paying ? '⏳ Processing...' : `✅ Pay ₹${payment.amount}`}</button>
+          </div>
         )}
       </div>
     </div>

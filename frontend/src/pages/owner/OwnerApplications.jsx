@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getReceivedApplications, reviewApplication } from '../../api/applications';
-
+import { showToast } from '../../components/Toast';
 export default function OwnerApplications() {
   const [apps, setApps]       = useState([]);
   const [loading, setLoading] = useState(true);
@@ -59,6 +59,9 @@ export default function OwnerApplications() {
                   onClick={() => handle(app.id, 'reject')}
                   className="flex-1 bg-red-500 text-white py-2 rounded-lg font-bold text-sm"
                 >❌ Reject</button>
+                  showToast('Application approved! Booking created.', 'success');
+                     // ya
+                  showToast('Application rejected.', 'error');
                 <button
                   onClick={() => navigate(`/owner/chat/${app.id}`)}
                   className="flex-1 bg-blue-500 text-white py-2 rounded-lg font-bold text-sm"

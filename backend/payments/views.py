@@ -17,7 +17,7 @@ class InitiatePaymentView(APIView):
         except Booking.DoesNotExist:
             return Response({'error': 'Booking not found'}, status=404)
 
-        payment = EscrowService.initiate(booking, request.user)
+        payment = EscrowService.initiate(booking)
         return Response(PaymentSerializer(payment).data)
 
 

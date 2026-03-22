@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
+import { showToast } from '../../components/Toast';
 
 export default function ListingQueue() {
   const [props, setProps]     = useState([]);
@@ -75,6 +76,7 @@ export default function ListingQueue() {
                 onClick={() => handle(p.id, 'approve')}
                 className="flex-1 bg-gradient-to-r from-green-600 to-green-500 text-white py-3 rounded-xl font-bold"
               >✅ Approve</button>
+              showToast('Property approved! Now live.', 'success');
               <button
                 onClick={() => {
                   const r = prompt('Rejection reason?');

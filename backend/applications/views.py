@@ -33,7 +33,7 @@ class ApplyView(APIView):
             return Response({'error': 'Property not found'}, status=404)
 
         if Application.objects.filter(property=prop, tenant=request.user).exists():
-            return Response({'error': 'Already applied for this property'}, status=400)
+            return Response({'error': 'Already applied'}, status=400)
 
         app = Application.objects.create(
             property=prop,
@@ -50,7 +50,7 @@ class MyApplicationsView(APIView):
     def get(self, request):
         apps = Application.objects.filter(
             tenant=request.user
-        ).order_by('-applied_at')
+        ).order_by('-created_at')
         return Response(ApplicationSerializer(apps, many=True).data)
 
 
@@ -60,7 +60,7 @@ class ReceivedApplicationsView(APIView):
     def get(self, request):
         apps = Application.objects.filter(
             property__owner=request.user
-        ).order_by('-applied_at')
+        ).order_by('-created_at')
         return Response(ApplicationSerializer(apps, many=True).data)
 
 
@@ -79,7 +79,6 @@ class ReviewApplicationView(APIView):
         if action == 'approve':
             app.status = 'approved'
             app.save()
-
             if not Booking.objects.filter(application=app).exists():
                 advance = float(app.property.monthly_rent) * 0.5
                 Booking.objects.create(
@@ -93,7 +92,6 @@ class ReviewApplicationView(APIView):
                     booking_ref=generate_booking_ref(),
                     status='confirmed',
                 )
-
         elif action == 'reject':
             app.status = 'rejected'
             app.rejection_reason = reason

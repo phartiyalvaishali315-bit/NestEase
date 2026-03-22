@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import Toast from './components/Toast';
 import './i18n/index.js';
 
 import Splash            from './pages/Splash';
@@ -21,13 +22,13 @@ import MyApplications    from './pages/tenant/MyApplications';
 import TenantBookings    from './pages/tenant/TenantBookings';
 import TenantChat        from './pages/tenant/TenantChat';
 import PayAdvance        from './pages/tenant/PayAdvance';
+import WriteReview       from './pages/tenant/WriteReview';
 import AdminDashboard    from './pages/admin/AdminDashboard';
 import KYCQueue          from './pages/admin/KYCQueue';
 import ListingQueue      from './pages/admin/ListingQueue';
 import EscrowPanel       from './pages/admin/EscrowPanel';
 import UserManagement    from './pages/admin/UserManagement';
 import DisputePanel      from './pages/admin/DisputePanel';
-import WriteReview from './pages/tenant/WriteReview';
 
 function ProtectedRoute({ children, role }) {
   const { user, loading } = useAuth();
@@ -44,17 +45,14 @@ function ProtectedRoute({ children, role }) {
 function AppRoutes() {
   return (
     <Routes>
-      {/* Public */}
       <Route path="/"              element={<Splash />} />
       <Route path="/welcome"       element={<Welcome />} />
       <Route path="/auth/mobile"   element={<MobileEntry />} />
       <Route path="/auth/otp"      element={<OTPVerify />} />
       <Route path="/auth/register" element={<Register />} />
 
-      {/* KYC */}
       <Route path="/kyc/upload" element={<ProtectedRoute><KYCUpload /></ProtectedRoute>} />
 
-      {/* Owner */}
       <Route path="/owner/dashboard"      element={<ProtectedRoute role="owner"><OwnerDashboard /></ProtectedRoute>} />
       <Route path="/owner/properties/add" element={<ProtectedRoute role="owner"><AddProperty /></ProtectedRoute>} />
       <Route path="/owner/properties"     element={<ProtectedRoute role="owner"><MyProperties /></ProtectedRoute>} />
@@ -63,17 +61,16 @@ function AppRoutes() {
       <Route path="/owner/chat"           element={<ProtectedRoute role="owner"><OwnerChat /></ProtectedRoute>} />
       <Route path="/owner/chat/:appId"    element={<ProtectedRoute role="owner"><OwnerChat /></ProtectedRoute>} />
 
-      {/* Tenant */}
-      <Route path="/tenant/dashboard"    element={<ProtectedRoute role="tenant"><TenantDashboard /></ProtectedRoute>} />
-      <Route path="/tenant/search"       element={<ProtectedRoute role="tenant"><PropertySearch /></ProtectedRoute>} />
-      <Route path="/tenant/property/:id" element={<ProtectedRoute role="tenant"><PropertyDetail /></ProtectedRoute>} />
-      <Route path="/tenant/applications" element={<ProtectedRoute role="tenant"><MyApplications /></ProtectedRoute>} />
-      <Route path="/tenant/bookings"     element={<ProtectedRoute role="tenant"><TenantBookings /></ProtectedRoute>} />
-      <Route path="/tenant/chat"         element={<ProtectedRoute role="tenant"><TenantChat /></ProtectedRoute>} />
-      <Route path="/tenant/chat/:appId"  element={<ProtectedRoute role="tenant"><TenantChat /></ProtectedRoute>} />
-      <Route path="/tenant/pay/:id"      element={<ProtectedRoute role="tenant"><PayAdvance /></ProtectedRoute>} />
+      <Route path="/tenant/dashboard"         element={<ProtectedRoute role="tenant"><TenantDashboard /></ProtectedRoute>} />
+      <Route path="/tenant/search"            element={<ProtectedRoute role="tenant"><PropertySearch /></ProtectedRoute>} />
+      <Route path="/tenant/property/:id"      element={<ProtectedRoute role="tenant"><PropertyDetail /></ProtectedRoute>} />
+      <Route path="/tenant/applications"      element={<ProtectedRoute role="tenant"><MyApplications /></ProtectedRoute>} />
+      <Route path="/tenant/bookings"          element={<ProtectedRoute role="tenant"><TenantBookings /></ProtectedRoute>} />
+      <Route path="/tenant/chat"              element={<ProtectedRoute role="tenant"><TenantChat /></ProtectedRoute>} />
+      <Route path="/tenant/chat/:appId"       element={<ProtectedRoute role="tenant"><TenantChat /></ProtectedRoute>} />
+      <Route path="/tenant/pay/:id"           element={<ProtectedRoute role="tenant"><PayAdvance /></ProtectedRoute>} />
       <Route path="/tenant/review/:bookingId" element={<ProtectedRoute role="tenant"><WriteReview /></ProtectedRoute>} />
-      {/* Admin */}
+
       <Route path="/admin/dashboard" element={<ProtectedRoute role="admin"><AdminDashboard /></ProtectedRoute>} />
       <Route path="/admin/kyc"       element={<ProtectedRoute role="admin"><KYCQueue /></ProtectedRoute>} />
       <Route path="/admin/listings"  element={<ProtectedRoute role="admin"><ListingQueue /></ProtectedRoute>} />
@@ -90,6 +87,7 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <Toast />
         <AppRoutes />
       </BrowserRouter>
     </AuthProvider>

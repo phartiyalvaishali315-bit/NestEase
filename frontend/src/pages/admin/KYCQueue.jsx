@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
+import { showToast } from '../../components/Toast';
 
 export default function KYCQueue() {
   const [kycs, setKycs]       = useState([]);
@@ -54,10 +55,12 @@ export default function KYCQueue() {
                 onClick={() => handle(kyc.id, 'approve')}
                 className="flex-1 bg-green-500 text-white py-2 rounded-lg font-bold"
               >✅ Approve</button>
+              showToast('KYC Approved!', 'success');
               <button
                 onClick={() => handle(kyc.id, 'reject')}
                 className="flex-1 bg-red-500 text-white py-2 rounded-lg font-bold"
               >❌ Reject</button>
+              showToast('KYC Rejected.', 'error');
             </div>
           </div>
         ))}

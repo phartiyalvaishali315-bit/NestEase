@@ -23,7 +23,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = (tokens, userData) => {
-    localStorage.setItem('access_token', tokens.access);
+    localStorage.setItem('access_token',  tokens.access);
     localStorage.setItem('refresh_token', tokens.refresh);
     setUser(userData);
   };

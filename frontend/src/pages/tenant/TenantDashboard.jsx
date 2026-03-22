@@ -22,11 +22,16 @@ export default function TenantDashboard() {
           </div>
 
           {/* Profile Avatar */}
-          <button
-            onClick={() => setProfile(true)}
-            className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center text-white font-black text-lg hover:bg-opacity-30 transition border-2 border-white border-opacity-50"
-          >
-            {user?.full_name?.[0]?.toUpperCase() || '?'}
+          <button onClick={() => setProfile(true)}
+            className="flex-shrink-0 w-10 h-10 rounded-full overflow-hidden border-2 border-white border-opacity-60 hover:border-opacity-100 transition">
+            {user?.profile_photo_url ? (
+              <img src={user.profile_photo_url} alt="profile"
+                className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-white bg-opacity-20 flex items-center justify-center text-white font-black text-lg">
+                {user?.full_name?.[0]?.toUpperCase() || '?'}
+              </div>
+            )}
           </button>
         </div>
       </nav>
@@ -65,15 +70,16 @@ export default function TenantDashboard() {
         <h3 className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-3">Quick Actions</h3>
         <div className="space-y-3">
           {[
-            { icon: '🔍', title: 'Search Properties',  sub: 'Find rooms, PGs & hostels near you', path: '/tenant/search',       bg: 'bg-gradient-to-r from-green-800 to-green-600', text: 'text-white' },
-            { icon: '📋', title: 'My Applications',    sub: 'Track your property applications',   path: '/tenant/applications', bg: 'bg-white border border-gray-200', text: 'text-gray-800' },
-            { icon: '📅', title: 'My Bookings',        sub: 'View confirmed bookings',            path: '/tenant/bookings',     bg: 'bg-white border border-gray-200', text: 'text-gray-800' },
-            { icon: '💬', title: 'Messages',           sub: 'Chat with property owners',          path: '/tenant/chat',         bg: 'bg-white border border-gray-200', text: 'text-gray-800' },
+            { icon: '🔍', title: 'Search Properties', sub: 'Find rooms, PGs & hostels near you', path: '/tenant/search',       bg: 'bg-gradient-to-r from-green-800 to-green-600', text: 'text-white' },
+            { icon: '📋', title: 'My Applications',   sub: 'Track your property applications',   path: '/tenant/applications', bg: 'bg-white border border-gray-200', text: 'text-gray-800' },
+            { icon: '📅', title: 'My Bookings',       sub: 'View confirmed bookings',            path: '/tenant/bookings',     bg: 'bg-white border border-gray-200', text: 'text-gray-800' },
+            { icon: '💬', title: 'Messages',          sub: 'Chat with property owners',          path: '/tenant/chat',         bg: 'bg-white border border-gray-200', text: 'text-gray-800' },
           ].map((item, i) => (
             <button key={i} onClick={() => navigate(item.path)}
-              className={`w-full ${item.bg} ${item.text} rounded-xl px-5 py-4 flex items-center gap-4 shadow-sm hover:shadow-md transition text-left`}
-            >
-              <div className="w-12 h-12 rounded-xl bg-black bg-opacity-10 flex items-center justify-center text-2xl flex-shrink-0">{item.icon}</div>
+              className={`w-full ${item.bg} ${item.text} rounded-xl px-5 py-4 flex items-center gap-4 shadow-sm hover:shadow-md transition text-left`}>
+              <div className="w-12 h-12 rounded-xl bg-black bg-opacity-10 flex items-center justify-center text-2xl flex-shrink-0">
+                {item.icon}
+              </div>
               <div className="flex-1">
                 <p className="font-bold text-base">{item.title}</p>
                 <p className="text-sm opacity-60">{item.sub}</p>
@@ -90,7 +96,8 @@ export default function TenantDashboard() {
             <span className="text-green-700 font-bold text-lg">{user?.trust_score || 0}/100</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
-            <div className="bg-green-500 rounded-full h-2" style={{ width: `${user?.trust_score || 0}%` }} />
+            <div className="bg-green-500 rounded-full h-2"
+              style={{ width: `${user?.trust_score || 0}%` }} />
           </div>
         </div>
       </div>

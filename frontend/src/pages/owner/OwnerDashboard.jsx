@@ -7,7 +7,7 @@ import ProfileSidebar from '../../components/ProfileSidebar';
 export default function OwnerDashboard() {
   const { user } = useAuth();
   const navigate  = useNavigate();
-  const [stats, setStats]       = useState({ properties: 0, bookings: 0, applications: 0, earnings: 0 });
+  const [stats, setStats]         = useState({ properties: 0, bookings: 0, applications: 0, earnings: 0 });
   const [showProfile, setProfile] = useState(false);
 
   useEffect(() => {
@@ -46,11 +46,16 @@ export default function OwnerDashboard() {
           </div>
 
           {/* Profile Avatar */}
-          <button
-            onClick={() => setProfile(true)}
-            className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center text-white font-black text-lg hover:bg-opacity-30 transition border-2 border-white border-opacity-50"
-          >
-            {user?.full_name?.[0]?.toUpperCase() || '?'}
+          <button onClick={() => setProfile(true)}
+            className="flex-shrink-0 w-10 h-10 rounded-full overflow-hidden border-2 border-white border-opacity-60 hover:border-opacity-100 transition">
+            {user?.profile_photo_url ? (
+              <img src={user.profile_photo_url} alt="profile"
+                className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-white bg-opacity-20 flex items-center justify-center text-white font-black text-lg">
+                {user?.full_name?.[0]?.toUpperCase() || '?'}
+              </div>
+            )}
           </button>
         </div>
       </nav>
@@ -69,10 +74,8 @@ export default function OwnerDashboard() {
                 <p className="text-orange-100 text-sm">Complete KYC to start listing properties</p>
               </div>
             </div>
-            <button
-              onClick={() => navigate('/kyc/upload')}
-              className="bg-white text-orange-500 px-4 py-2 rounded-lg text-sm font-bold"
-            >Verify Now</button>
+            <button onClick={() => navigate('/kyc/upload')}
+              className="bg-white text-orange-500 px-4 py-2 rounded-lg text-sm font-bold">Verify Now</button>
           </div>
         )}
 
@@ -86,7 +89,8 @@ export default function OwnerDashboard() {
               <span className="font-black text-xl">{user?.trust_score || 0}<span className="text-blue-300 text-sm">/100</span></span>
             </div>
             <div className="w-full bg-blue-900 rounded-full h-2">
-              <div className="bg-green-400 rounded-full h-2" style={{ width: `${user?.trust_score || 0}%` }} />
+              <div className="bg-green-400 rounded-full h-2"
+                style={{ width: `${user?.trust_score || 0}%` }} />
             </div>
           </div>
         </div>
@@ -111,16 +115,17 @@ export default function OwnerDashboard() {
         <h3 className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-3">Quick Actions</h3>
         <div className="space-y-3">
           {[
-            { icon: '➕', title: 'Add New Property',    sub: 'List a Room, PG or Hostel',      path: '/owner/properties/add', bg: 'bg-gradient-to-r from-blue-900 to-blue-700', text: 'text-white' },
-            { icon: '🏡', title: 'My Properties',       sub: 'View and manage your listings',  path: '/owner/properties',     bg: 'bg-white border border-gray-200', text: 'text-blue-900' },
-            { icon: '📋', title: 'Tenant Applications', sub: 'Review and approve applications', path: '/owner/applications',  bg: 'bg-white border border-gray-200', text: 'text-blue-900' },
-            { icon: '📅', title: 'Bookings',            sub: 'View confirmed bookings',        path: '/owner/bookings',       bg: 'bg-white border border-gray-200', text: 'text-blue-900' },
-            { icon: '💬', title: 'Messages',            sub: 'Chat with tenants',              path: '/owner/chat',           bg: 'bg-white border border-gray-200', text: 'text-blue-900' },
+            { icon: '➕', title: 'Add New Property',    sub: 'List a Room, PG or Hostel',       path: '/owner/properties/add', bg: 'bg-gradient-to-r from-blue-900 to-blue-700', text: 'text-white' },
+            { icon: '🏡', title: 'My Properties',       sub: 'View and manage your listings',   path: '/owner/properties',     bg: 'bg-white border border-gray-200', text: 'text-blue-900' },
+            { icon: '📋', title: 'Tenant Applications', sub: 'Review and approve applications', path: '/owner/applications',   bg: 'bg-white border border-gray-200', text: 'text-blue-900' },
+            { icon: '📅', title: 'Bookings',            sub: 'View confirmed bookings',         path: '/owner/bookings',       bg: 'bg-white border border-gray-200', text: 'text-blue-900' },
+            { icon: '💬', title: 'Messages',            sub: 'Chat with tenants',               path: '/owner/chat',           bg: 'bg-white border border-gray-200', text: 'text-blue-900' },
           ].map((item, i) => (
             <button key={i} onClick={() => navigate(item.path)}
-              className={`w-full ${item.bg} ${item.text} rounded-xl px-5 py-4 flex items-center gap-4 shadow-sm hover:shadow-md transition text-left`}
-            >
-              <div className="w-12 h-12 rounded-xl bg-black bg-opacity-10 flex items-center justify-center text-2xl flex-shrink-0">{item.icon}</div>
+              className={`w-full ${item.bg} ${item.text} rounded-xl px-5 py-4 flex items-center gap-4 shadow-sm hover:shadow-md transition text-left`}>
+              <div className="w-12 h-12 rounded-xl bg-black bg-opacity-10 flex items-center justify-center text-2xl flex-shrink-0">
+                {item.icon}
+              </div>
               <div className="flex-1">
                 <p className="font-bold text-base">{item.title}</p>
                 <p className="text-sm opacity-60">{item.sub}</p>

@@ -5,6 +5,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User, OTPToken
 from .serializers import UserSerializer
 from .utils import generate_otp, verify_otp
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+
 
 
 class SendOTPView(APIView):
@@ -59,7 +61,7 @@ class VerifyOTPView(APIView):
 
 class ProfileView(APIView):
     permission_classes = [IsAuthenticated]
-
+    parser_classes     = [MultiPartParser, FormParser, JSONParser]
     def get(self, request):
         return Response(UserSerializer(request.user).data)
 

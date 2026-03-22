@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getMyApplications } from '../../api/applications';
+import { showToast } from '../../components/Toast';
 
 export default function MyApplications() {
   const [apps, setApps]       = useState([]);

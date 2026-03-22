@@ -52,10 +52,10 @@ class KYCApproveView(APIView):
             reason = request.data.get('reason', '')
 
             if action == 'approve':
-                kyc.status      = 'approved'
-                kyc.verified_by = request.user
+                kyc.status           = 'approved'
+                kyc.verified_by      = request.user
+                kyc.rejection_reason = ''
                 kyc.save()
-                # Auto verify user
                 kyc.user.is_kyc_verified = True
                 kyc.user.save()
 

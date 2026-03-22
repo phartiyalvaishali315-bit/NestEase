@@ -7,12 +7,25 @@ export default function TenantBookings() {
   const [loading, setLoading]   = useState(true);
   const navigate                = useNavigate();
 
-  useEffect(() => {
-    api.get('/api/bookings/')
-      .then(res => setBookings(res.data))
-      .catch(() => setBookings([]))
-      .finally(() => setLoading(false));
-  }, []);
+  const fetchBookings = async () => {
+    try {
+      const res = await api.get('/api/bookings/');
+      setBookings(res.data);
+    } catch { }
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchBookings(); }, []);
+
+  const completeBooking = async (id) => {
+    try {
+      await api.patch(`/api/bookings/${id}/complete/`);
+      await fetchBookings();
+      alert('✅ Booking marked as completed!');
+    } catch {
+      alert('Failed to complete booking');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -31,12 +44,9 @@ export default function TenantBookings() {
         ) : bookings.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-5xl mb-4">📅</p>
-            <p className="text-gray-700 font-bold text-lg">No bookings yet!</p>
-            <p className="text-gray-400 text-sm mt-1">Apply for properties to get bookings</p>
-            <button
-              onClick={() => navigate('/tenant/search')}
-              className="mt-4 bg-green-700 text-white px-6 py-2 rounded-xl font-bold"
-            >Search Properties</button>
+            <p className="text-gray-700 font-bold">No bookings yet!</p>
+            <button onClick={() => navigate('/tenant/search')}
+              className="mt-4 bg-green-700 text-white px-6 py-2 rounded-xl font-bold">Search Properties</button>
           </div>
         ) : bookings.map(b => (
           <div key={b.id} className="bg-white rounded-2xl shadow-sm p-5 border border-gray-100">
@@ -55,30 +65,37 @@ export default function TenantBookings() {
               }`}>{b.status}</span>
             </div>
 
-            <div className="bg-gray-50 rounded-xl p-3 mb-3 flex justify-between">
+            <div className="bg-gray-50 rounded-xl p-3 mb-2 flex justify-between">
               <span className="text-gray-500 text-sm">Monthly Rent</span>
               <span className="font-bold text-gray-800">₹{b.monthly_rent}</span>
             </div>
-
             <div className="bg-blue-50 rounded-xl p-3 mb-3 flex justify-between">
               <span className="text-blue-600 text-sm">Advance (50%)</span>
               <span className="font-bold text-blue-700">₹{b.advance_amount}</span>
             </div>
 
             <div className="flex gap-2 flex-wrap">
-              <button
-                onClick={() => navigate(`/tenant/pay/${b.id}`)}
-                className="flex-1 bg-gradient-to-r from-green-700 to-green-600 text-white py-2 rounded-xl font-bold text-sm"
-              >💳 Pay Advance</button>
-              <button
-                onClick={() => navigate('/tenant/chat')}
-                className="flex-1 bg-blue-500 text-white py-2 rounded-xl font-bold text-sm"
-              >💬 Chat</button>
+              {b.status === 'confirmed' && (
+                <button onClick={() => navigate(`/tenant/pay/${b.id}`)}
+                  className="flex-1 bg-gradient-to-r from-green-700 to-green-600 text-white py-2 rounded-xl font-bold text-sm">
+                  💳 Pay Advance
+                </button>
+              )}
+              <button onClick={() => navigate('/tenant/chat')}
+                className="flex-1 bg-blue-500 text-white py-2 rounded-xl font-bold text-sm">
+                💬 Chat
+              </button>
+              {b.status === 'confirmed' && (
+                <button onClick={() => completeBooking(b.id)}
+                  className="flex-1 bg-purple-500 text-white py-2 rounded-xl font-bold text-sm">
+                  ✅ Mark Complete
+                </button>
+              )}
               {b.status === 'completed' && (
-                <button
-                  onClick={() => navigate(`/tenant/review/${b.id}`)}
-                  className="flex-1 bg-yellow-500 text-white py-2 rounded-xl font-bold text-sm"
-                >⭐ Review</button>
+                <button onClick={() => navigate(`/tenant/review/${b.id}`)}
+                  className="flex-1 bg-yellow-500 text-white py-2 rounded-xl font-bold text-sm">
+                  ⭐ Write Review
+                </button>
               )}
             </div>
           </div>
